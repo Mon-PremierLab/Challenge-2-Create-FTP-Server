@@ -3,6 +3,32 @@
 ## Bienvenue
 Bienvenue dans ce challenge d'administration système ! En tant qu'administrateur système chez NaBysso, vous êtes chargé de mettre en place une solution FTP sécurisée sur une instance Amazon Linux préconfiguée.
 
+## Prérequis
+- Connaissance de base des commandes Linux
+- Un client FTP (FileZilla, WinSCP, ou autre)
+- Un éditeur de texte (vim, nano)
+- Un terminal SSH
+- Accès à AWS (optionnel)
+
+## Qu'est-ce qu'un serveur FTP ?
+Le FTP (File Transfer Protocol) est un protocole standard d'Internet permettant le transfert de fichiers entre un client et un serveur sur un réseau informatique.
+
+### Caractéristiques principales
+- **Transfert de fichiers** : Permet l'upload et le download de fichiers
+- **Architecture client-serveur** : Fonctionne avec un serveur central et des clients FTP
+- **Authentification** : Gère les accès via un système d'utilisateurs/mots de passe
+- **Gestion des droits** : Contrôle les permissions d'accès aux fichiers et répertoires
+
+### Fonctionnement
+1. **Connexion** : Le client se connecte au serveur (port 21 par défaut)
+2. **Authentification** : L'utilisateur fournit ses identifiants
+3. **Navigation** : Parcours des répertoires autorisés
+4. **Transfert** : Échange de fichiers via un canal de données (port 20 ou ports passifs)
+
+### Types de connexions
+- **FTP actif** : Le serveur initie la connexion de données
+- **FTP passif** : Le client initie la connexion de données (plus sécurisé)
+
 ### Contexte
 NaBysso, entreprise de développement logiciel en pleine croissance, est composée de trois départements :
 - **Développement** : 10 développeurs travaillant sur du code source sensible
@@ -20,7 +46,7 @@ Actuellement :
 ## Le challenge
 En tant qu'administrateur système, vous devez sécuriser et centraliser le partage de fichiers :
 
-1. **Configuration du serveur VSFTPD**
+1. **Configuration du serveur VSFTPD (Very Secure FTP Daemon)**
    - Installation et configuration sécurisée
    - Gestion des connexions FTP
    - Mise en place de la journalisation
@@ -65,14 +91,15 @@ Pour réaliser ce challenge, vous avez plusieurs options :
      - Un VPC avec un sous-réseau public
      - Une instance Amazon Linux 2023
      - Un volume EBS de 50 Go
-     - Les Security Groups pour FTP
+     - Les Security Groups pour une instance de machine virtuelle sur laquelle tournera votre serveur FTP
      - Les ressources IAM nécessaires
 
 3. **Sandbox MonPremierLab**
-   - Contactez notre support via monpremierlab@gmail.com 
-   - Nous vous fournirons un accès à un environnement préconfiguré
+   - Si vous n'avez pas de compte AWS, vous pouvez contacter notre support via monpremierlab@gmail.com 
+   - Nous vous fournirons un accès à un environnement préconfiguré pour ce lab
    - Durée d'accès : 2 heures
-   - **Architecture de votre infrastructure**
+  
+#### Architecture de votre infrastructure sur AWS
   ![Architecture de votre Stack sur AWS](ftp-server-stack.png)
 
 > **Note** : Les instructions de ce lab sont basées sur Amazon Linux 2023, mais peuvent être adaptées à d'autres distributions Linux.
@@ -90,7 +117,7 @@ Votre serveur FTP doit répondre aux exigences suivantes :
 - Permissions spécifiques par département
 - Quotas de stockage (5GB/département)
 - Logs de connexion et d'activité
-- Documentation de configuration
+- Documentation de votre configuration
 
 ## Où tout trouver
 ### Documentations officielles
@@ -129,20 +156,50 @@ Votre serveur FTP doit répondre aux exigences suivantes :
 
 ## Construire votre projet
 
-### Étape 1 : Connexion à l'instance
+### Étape 1 : Connexion à l'instance (⏱️ ~5 minutes)
 Si vous utilisez l'environnement AWS ou la Sandbox MonPremierLab, connectez-vous à l'instance via SSH :
 ```bash
-ssh -i ./credentials/nabysso-key.pem ec2-user@<IP-FOURNIE>
+ssh -i ./credentials/MPL-KeyPairLab.pem ec2-user@<IP-FOURNIE>
 ```
 
-### Étape 2 : Préparation des scripts
+### Points de contrôle - Étape 1
+✓ La connexion SSH est établie
+✓ Vous avez accès à la ligne de commande
+✓ La clé SSH est correctement utilisée
+
+### Étape 2 : Vérification de l'environnement distant (⏱️ ~5 minutes)
+```bash
+# Vérifiez l'environnement de travail
+pwd
+ls -la
+```
+
+### Étape 3 : Transfert des fichiers (⏱️ ~10 minutes)
+Une fois connecté, transférez les fichiers nécessaires sur votre instance :
+
+```bash
+# Depuis un nouveau terminal sur votre machine locale
+scp -i ./credentials/MPL-KeyPairLab.pem -r ./scripts ./config ./tests ec2-user@<IP-FOURNIE>:~
+```
+
+Dans le terminal SSH connecté au serveur, vérifiez que les fichiers ont été correctement transférés :
+```bash
+ls -la ~/scripts ~/config ~/tests
+```
+
+### Points de contrôle - Étape 3
+✓ Les fichiers sont correctement transférés
+✓ La structure des répertoires est conforme
+✓ Les permissions des fichiers sont correctes
+
+### Étape 4 : Préparation des scripts
 Avant d'exécuter les scripts fournis, vous devez les rendre exécutables :
 ```bash
 # Rendez tous les fichiers .sh du dossier scripts exécutables
 chmod +x ./scripts/*.sh
 ```
 
-### Étape 3 : Installation des packages nécessaires
+### Étape 5 : Installation des packages nécessaires
 Assurez-vous que tous les outils requis sont installés :
 ```bash
 # Mettre à jour les packages
@@ -152,84 +209,178 @@ sudo dnf update -y
 sudo dnf install -y vsftpd quota
 ```
 
-### Étape 4 : Configuration initiale de VSFTPD
-1. Démarrez et activez le service VSFTPD :
+### Étape 6 : Configuration initiale de VSFTPD (⏱️ ~20 minutes)
+
+1. Sauvegardez d'abord la configuration par défaut :
 ```bash
-# Assurez-vous que le service VSFTPD est démarré et configuré pour démarrer automatiquement au démarrage du système.
+# Créer une sauvegarde du fichier de configuration original
+sudo cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd.conf.bak
 ```
 
-2. Sauvegardez la configuration par défaut :
+2. Examinez le fichier de configuration fourni :
 ```bash
-# Sauvegardez la configuration par défaut de VSFTPD pour pouvoir y revenir si nécessaire.
+# Prenez le temps d'analyser le fichier de configuration
+cat ./config/vsftpd.conf
+```
+
+Le fichier de configuration est structuré en plusieurs sections :
+- Sécurité niveau 1 : Configuration de base (accès anonyme, chroot)
+- Sécurité niveau 2 : Isolation des utilisateurs
+- Sécurité niveau 4 : Configuration des logs
+- Configuration du mode passif
+
+3. Remplacez l'IP publique dans le fichier de configuration :
+```bash
+# Récupérez l'IP publique de votre instance
+PUBLIC_IP=$(curl http://checkip.amazonaws.com)
+
+# Remplacez la variable ${PUBLIC_IP} dans le fichier de configuration
+sed "s/\${PUBLIC_IP}/$PUBLIC_IP/" ./config/vsftpd.conf > vsftpd.conf.tmp
+sudo mv vsftpd.conf.tmp /etc/vsftpd/vsftpd.conf
+```
+
+4. Sauvegardez la configuration par défaut :
+```bash
+# Sauvegardez la configuration par défaut de VSFTPD
 sudo cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd.conf.orig
 ```
 
-3. Remplacez la configuration par le fichier fourni :
+5. Redémarrez le service pour appliquer les modifications :
 ```bash
-sudo cp ./config/vsftpd.conf /etc/vsftpd/vsftpd.conf
-```
-
-4. Redémarrez le service pour appliquer les modifications :
-```bash
-# Appliquez les modifications en redémarrant le service VSFTPD.
 sudo systemctl restart vsftpd
 ```
 
-### Étape 5 : Création de la structure des répertoires
-1. Créez les répertoires pour chaque département :
+6. Vérifiez que le service est bien démarré :
 ```bash
-# Utiliser la command mkdir pour créer les repertoires
+sudo systemctl status vsftpd
 ```
 
-2. Attribuez les permissions et le propriétaire appropriés :
+### Points de contrôle - Étape 6
+✓ Le fichier vsftpd.conf a été analysé et compris
+✓ L'IP publique a été correctement remplacée
+✓ Le service VSFTPD est en cours d'exécution
+✓ Les tests de connexion sont positifs
+
+### Étape 7 : Structure des répertoires et permissions
+
+1. **Création de la structure de base**
 ```bash
-# Change le propriétaire et le groupe des répertoires en 'ftp'
+# Création du répertoire principal
+sudo mkdir -p /data/ftp
 
-sudo chown -R ftp:ftp /data/ftp/
-
-# Définit les permissions pour que seul le propriétaire ait un accès complet, 
-# le groupe ait un accès en lecture/exécution, et aucun accès pour les autres
-sudo chmod -R 750 /data/ftp/
+# Création des répertoires par département
+sudo mkdir -p /data/ftp/{development,marketing,hr}
 ```
 
-### Étape 6 : Gestion des utilisateurs
-1. Créez des utilisateurs pour chaque département :
+2. **Configuration des permissions de base**
 ```bash
-# Exécute le script pour créer les utilisateurs et les associer à leurs départements respectifs
+# Le répertoire principal doit appartenir à root pour chroot
+sudo chown root:root /data/ftp
+sudo chmod 755 /data/ftp
 
-sudo ./scripts/create_users.sh
+# Les répertoires des départements doivent aussi appartenir à root
+sudo chown root:root /data/ftp/development
+sudo chown root:root /data/ftp/marketing
+sudo chown root:root /data/ftp/hr
+
+sudo chmod 755 /data/ftp/development
+sudo chmod 755 /data/ftp/marketing
+sudo chmod 755 /data/ftp/hr
 ```
 
-2. Vérifiez que les utilisateurs ont été créés correctement :
+### Étape 8 : Création et configuration des utilisateurs
+
+> **Note**: Le fichier `scripts/create_users.sh` vous donne plus d'information sur le
+> processus de création des utilisateurs. Vous pouvez vous y référer. 
+
+1. **Création des utilisateurs par département**
 ```bash
-cat /etc/passwd | grep ftpuser
+# Exemple pour un utilisateur du département development
+# Créer le répertoire upload de l'utilisateur nommé justin
+sudo mkdir -p /data/ftp/development/justin/upload
+
+# Créer l'utilisateur avec son home dans le dossier upload
+sudo useradd -d /data/ftp/development/justin/upload -s /sbin/nologin justin
+
+# Ajouter l'utilisateur à la liste vsftpd
+sudo echo "justin" | sudo tee -a /etc/vsftpd/user_list
+
+# Configuration des permissions
+sudo chown root:root /data/ftp/development/justin
+sudo chmod 755 /data/ftp/development/justin
+
+sudo chown justin:justin /data/ftp/development/justin/upload
+sudo chmod 700 /data/ftp/development/justin/upload
 ```
 
-### Étape 7 : Mise en place des quotas
-1. Configurez les quotas pour le volume `/data` :
+2. **Vérification des permissions**
 ```bash
-sudo ./scripts/configure_quotas.sh
+# Vérifier la structure du dossier utilisateur
+ls -la /data/ftp/development/justin
+# Doit montrer : propriétaire root:root avec droits 755
+
+ls -la /data/ftp/development/justin/upload
+# Doit montrer : propriétaire justin:justin avec droits 700
 ```
 
-2. Vérifiez les quotas appliqués :
-```bash
-sudo repquota /data
-```
+### Étape 9 : Test et Validation
 
-### Étape 8 : Tests et validation
-1. Testez les accès FTP avec les scripts fournis :
-```bash
-./tests/test_ftp_access.sh
-./tests/test_permissions.sh
-./tests/test_quotas.sh
-```
+1. **Test avec FileZilla**
+   FileZilla est un client FTP gratuit et open-source qui offre une interface graphique intuitive pour les transferts de fichiers.
 
-2. Vérifiez les logs pour vous assurer que tout fonctionne correctement :
+   Configuration de la connexion :
+   - Hôte : sftp://<votre-ip>
+   - Port : 21
+   - Type d'authentification : Normale
+   - Identifiant : votre_utilisateur
+   - Mot de passe : votre_mot_de_passe
+
+   Étapes de test :
+   1. Ouvrez FileZilla
+   2. Entrez les informations de connexion dans la barre rapide en haut
+   3. Cliquez sur "Connexion rapide"
+   4. Vérifiez que vous pouvez voir le dossier 'upload'
+   5. Essayez de téléverser un fichier test
+   6. Vérifiez que vous ne pouvez pas sortir du répertoire assigné
+
+2. **Vérification des logs**
 ```bash
+# Surveillance des connexions en temps réel
 sudo tail -f /var/log/vsftpd.log
 ```
 
-### Étape 9 : Challenge Supplémentaire: Sauvegarde des données sur Amazon S3
+3. **Résolution des problèmes courants**
+- Si erreur 500 : Vérifier que le dossier parent appartient à root
+- Si erreur 550 : Vérifier les permissions du dossier upload
+- Si erreur de connexion : Vérifier le pare-feu et les ports (20, 21)
+
+### Étape 10 : Configuration des quotas (Optionnel)
+
+1. **Installation des outils de quota**
+```bash
+sudo dnf install -y quota
+```
+
+2. **Configuration du système de fichiers**
+```bash
+# Modifier /etc/fstab pour ajouter les options de quota
+sudo sed -i 's/defaults/defaults,usrquota,grpquota/' /etc/fstab
+
+# Remonter le système de fichiers
+sudo mount -o remount /data
+```
+
+3. **Activation des quotas**
+```bash
+# Initialisation des quotas
+sudo quotacheck -cugm /data
+sudo quotaon -v /data
+
+# Configuration des limites (exemple : 5GB)
+sudo setquota -u justin 5242880 5242880 0 0 /data
+```
+
+### Étape 11 : Sauvegardes (Optionnel)
 
 **Qu'est-ce qu'Amazon S3 ?**
 Amazon Simple Storage Service (S3) est un service de stockage d'objets qui offre une scalabilité, une disponibilité des données, une sécurité et des performances de pointe. Il permet de stocker et de protéger n'importe quelle quantité de données pour différents cas d'utilisation comme :
@@ -257,12 +408,16 @@ Amazon Simple Storage Service (S3) est un service de stockage d'objets qui offre
 
 2. **Configuration de l'AWS CLI**
    ```bash
-   # Installation de l'AWS CLI
+   # Installation de la commande AWS `AWS CLI` (si non installé)
    sudo dnf install -y aws-cli
 
-   # Configuration des credentials
-   aws configure
+   # Vérification que le profil IAM est bien attaché
+   aws sts get-caller-identity
    ```
+
+   > **Note**: Si un profil IAM est attaché à votre instance avec les bonnes permissions S3, 
+   > vous n'avez pas besoin d'exécuter `aws configure`. Les credentials sont automatiquement 
+   > gérés par le service de métadonnées AWS.
 
 3. **Script de sauvegarde**
    Créez un script nommé `backup_to_s3.sh` :
@@ -304,6 +459,63 @@ Amazon Simple Storage Service (S3) est un service de stockage d'objets qui offre
 - Mettre en place une rotation des sauvegardes
 - Ajouter une notification en cas d'échec
 - Implémenter un système de surveillance des tailles de sauvegarde
+
+## Guide de dépannage
+
+### Problèmes courants
+| Problème | Cause possible | Solution |
+|----------|----------------|----------|
+| Connexion FTP refusée | Port 21 bloqué | Vérifier les security groups AWS |
+| Erreur passive mode | IP incorrecte | Vérifier pasv_address dans vsftpd.conf |
+| Permission denied | Droits incorrects | Vérifier les permissions avec ls -la |
+| Service ne démarre pas | Erreur de configuration | Vérifier /var/log/messages |
+| Timeout connexion | Règles firewall | Vérifier les security groups et iptables |
+
+### Commandes utiles de diagnostic
+```bash
+# Vérifier le status du service
+sudo systemctl status vsftpd
+
+# Consulter les logs en temps réel
+sudo tail -f /var/log/vsftpd.log
+
+# Tester la configuration
+sudo vsftpd -olisten=NO /etc/vsftpd/vsftpd.conf
+
+# Vérifier les ports en écoute
+sudo netstat -tulpn | grep vsftpd
+
+# Tester la connexion locale
+ftp localhost
+```
+
+### Dépannage des problèmes de chroot
+
+Si vous rencontrez des erreurs 500 lors de la connexion FTP, vérifiez ces points :
+
+1. **Structure des permissions**
+   ```bash
+   # Vérifiez le propriétaire et les droits du dossier parent
+   ls -ld /chemin/vers/dossier_utilisateur
+   # Doit afficher : drwxr-xr-x root root
+   
+   # Vérifiez le propriétaire et les droits du dossier upload
+   ls -ld /chemin/vers/dossier_utilisateur/upload
+   # Doit afficher : drwxr-xr-x utilisateur utilisateur
+   ```
+
+2. **Configuration vsftpd**
+   Vérifiez dans `/etc/vsftpd/vsftpd.conf` :
+   ```ini
+   chroot_local_user=YES
+   allow_writeable_chroot=YES
+   ```
+
+3. **Logs d'erreur courants**
+   - "500 OOPS: vsftpd: refusing to run with writable root inside chroot()"
+     → Le dossier parent n'appartient pas à root
+   - "500 OOPS: cannot change directory"
+     → Problème de permissions sur le dossier upload
 
 ## Des feedback pour nous?
 Vos retours sont précieux ! Partagez votre expérience sur :
