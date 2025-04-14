@@ -4,7 +4,7 @@
 
 # Vérifiez les permissions du répertoire Développement
 echo "Vérification des permissions pour /data/ftp/development"
-ls -ld /data/ftp/development
+ls -lad /data/ftp/development
 
 # Vérifiez les permissions du répertoire Marketing
 echo "Vérification des permissions pour /data/ftp/marketing"
