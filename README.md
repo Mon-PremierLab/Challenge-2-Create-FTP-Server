@@ -1,4 +1,5 @@
-![alt text](MonPremierLab-Logo.jpg){ width=100px }
+<img src="MonPremierLab-Logo.jpg" alt="Logo de MonPremierLab" width="100"/>
+
 # MonPremierLAB - Configuration d'un Serveur FTP Sécurisé pour NaBysso
 
 ## Bienvenue
