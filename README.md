@@ -137,7 +137,7 @@ Votre serveur FTP doit répondre aux exigences suivantes :
   
 - `infrastructure/` : Ressources pour le déploiement
   - `nabysso-ftp-infra.yml` : Template CloudFormation AWS
-  - `README.md` : Guide de déploiement d'un template CloudFormation
+  - `Créer une stack AWS avec CloudFormation` : [Guide de déploiement d'un template CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html)
 
 - `scripts/` : Scripts d'automatisation
   - `create_users.sh` : Création des utilisateurs et groupes
@@ -158,7 +158,7 @@ Votre serveur FTP doit répondre aux exigences suivantes :
 ### Étape 1 : Connexion à l'instance (⏱️ ~5 minutes)
 Si vous utilisez l'environnement AWS ou la Sandbox MonPremierLab, connectez-vous à l'instance via SSH :
 ```bash
-ssh -i ./credentials/MPL-KeyPairLab.pem ec2-user@<IP-FOURNIE>
+ssh -i <chemin>/MPL-KeyPairLab.pem ec2-user@<IP-FOURNIE>
 ```
 
 ### Points de contrôle - Étape 1
@@ -178,7 +178,7 @@ Une fois connecté, transférez les fichiers nécessaires sur votre instance :
 
 ```bash
 # Depuis un nouveau terminal sur votre machine locale
-scp -i ./credentials/MPL-KeyPairLab.pem -r ./scripts ./config ./tests ec2-user@<IP-FOURNIE>:~
+scp -i <chemin>/MPL-KeyPairLab.pem -r ./scripts ./config ./tests ec2-user@<IP-FOURNIE>:~
 ```
 
 Dans le terminal SSH connecté au serveur, vérifiez que les fichiers ont été correctement transférés :
