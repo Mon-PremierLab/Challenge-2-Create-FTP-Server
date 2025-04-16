@@ -105,28 +105,6 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ftp-sg
 
-  # IAM Role pour EC2
-  FTPServerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-
-  FTPServerInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: /
-      Roles:
-        - !Ref FTPServerRole
-
   # EBS Volume
   FTPDataVolume:
     Type: AWS::EC2::Volume
@@ -149,7 +127,43 @@ Resources:
         Rules:
           - Id: DeleteOldBackups
             Status: Enabled
-            ExpirationInDays: 30
+            ExpirationInDays: 2
+
+    # IAM Role pour EC2
+  FTPServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FTPServerS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub arn:aws:s3:::nabysso-backup-${AWS::AccountId}
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub arn:aws:s3:::nabysso-backup-${AWS::AccountId}/*
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+  FTPServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref FTPServerRole
 
   # FTP Server
   FTPServer:
